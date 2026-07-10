@@ -54,10 +54,10 @@ def grade_badge(letter, size="2em"):
 def run_check(channel, limit):
     """Fetch + analyze videos, returning CLI-compatible result dicts."""
     lex, compiled = get_lexicon()
+    with st.spinner("Finding the channel’s latest videos…"):
+        videos = fetch_videos(channel, limit)  # raises yt.NotFoundError on a bad handle/link
     results = []
     with st.status("Checking videos…", expanded=True) as status:
-        st.write("Fetching latest videos…")
-        videos = fetch_videos(channel, limit)
         for v in videos:
             st.write(f"• {v['title']}")
             snippets = fetch_transcript(v["id"])
@@ -147,14 +147,17 @@ with st.form("check"):
 if submitted:
     channel = (channel or "").strip()
     if not channel:
-        st.error("Please enter a channel handle or video link.")
+        st.warning("Please enter a channel handle or video link first.")
     else:
         try:
             st.session_state["results"] = run_check(channel, limit)
             st.session_state["channel"] = channel
-        except Exception as e:  # network / bad input / no yt-dlp
+        except yt.NotFoundError as e:
             st.session_state.pop("results", None)
-            st.error(f"Couldn't check that input: {e}")
+            st.error(f"🔎 {e}")
+        except Exception as e:  # network / no yt-dlp / unexpected
+            st.session_state.pop("results", None)
+            st.error(f"Something went wrong while checking that input: {e}")
 
 if st.session_state.get("results"):
     channel = st.session_state["channel"]

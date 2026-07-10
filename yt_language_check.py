@@ -49,8 +49,19 @@ CENSORED_RE = re.compile(r"\b\w+\*+\w*\b")         # self-censored: f*ck, s***
 
 # ---------------------------------------------------------------- fetching
 
+class NotFoundError(Exception):
+    """The channel or video couldn't be found — usually a typo or bad link."""
+
+
+NOT_FOUND_MSG = ("Couldn't find that channel or video. Please check the spelling "
+                 "of the handle or link and try again.")
+
+
 def get_channel_videos(url, limit):
-    """Return list of {id, title} for the channel's latest `limit` videos."""
+    """Return list of {id, title} for the channel's latest `limit` videos.
+
+    Raises NotFoundError if the channel/video doesn't exist (e.g. a misspelled
+    handle or link)."""
     try:
         import yt_dlp
     except ImportError:
@@ -63,14 +74,24 @@ def get_channel_videos(url, limit):
         "quiet": True,
         "no_warnings": True,
     }
-    with yt_dlp.YoutubeDL(opts) as ydl:
-        info = ydl.extract_info(url, download=False)
+    try:
+        with yt_dlp.YoutubeDL(opts) as ydl:
+            info = ydl.extract_info(url, download=False)
+    except yt_dlp.utils.DownloadError as e:
+        raise NotFoundError(NOT_FOUND_MSG) from e
 
+    if info is None:
+        raise NotFoundError(NOT_FOUND_MSG)
     if info.get("entries") is not None:
         entries = list(info["entries"])[:limit]
-        return [{"id": e["id"], "title": e.get("title") or e["id"]} for e in entries if e]
-    # single video
-    return [{"id": info["id"], "title": info.get("title") or info["id"]}]
+        videos = [{"id": e["id"], "title": e.get("title") or e["id"]} for e in entries if e]
+    else:  # single video
+        videos = [{"id": info["id"], "title": info.get("title") or info["id"]}]
+    if not videos:
+        raise NotFoundError(
+            "That channel was found but has no videos to check. "
+            "Double-check the handle or try a different channel.")
+    return videos
 
 
 def normalize_url(url):
@@ -352,7 +373,10 @@ def main():
     lex, compiled = load_lexicon(lex_path)
 
     print(f"Fetching latest {args.limit} videos for {args.channel} ...")
-    videos = get_channel_videos(args.channel, args.limit)
+    try:
+        videos = get_channel_videos(args.channel, args.limit)
+    except NotFoundError as e:
+        sys.exit(f"\n{e}")
     results = []
     for v in videos:
         print(f"  • {v['title']}")
