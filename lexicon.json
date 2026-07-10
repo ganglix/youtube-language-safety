@@ -52,7 +52,14 @@
     }
   },
   "grading": {
-    "_comment": "Grade from weighted hits per 1000 spoken words. Any tier-4 (severity 12) hit caps grade at D; 3+ such hits = F.",
-    "thresholds": { "A": 1, "B": 3, "C": 8, "D": 15 }
+    "_comment": "Grade from weighted hits per 1000 spoken words. Any tier-4 (severity 12) hit caps grade at D; 3+ such hits = F. 'labels' give each grade a human-readable meaning shown in the report.",
+    "thresholds": { "A": 1, "B": 3, "C": 8, "D": 15 },
+    "labels": {
+      "A": "Clean — family-friendly",
+      "B": "Mild — occasional light language",
+      "C": "Moderate — some coarse language",
+      "D": "Strong — frequent coarse language",
+      "F": "Explicit — heavy or harmful language"
+    }
   }
 }

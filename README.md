@@ -32,7 +32,29 @@ or install the two dependencies directly:
 pip3 install yt-dlp youtube-transcript-api
 ```
 
-## Usage
+## Web app (phone-friendly)
+
+Prefer a tap-and-check experience — for example, a parent on a phone? Run the
+Streamlit app:
+
+```bash
+pip3 install -r requirements.txt
+streamlit run app.py
+```
+
+Open the URL it prints, paste a channel or video link, tap **Check**, and read
+the grade. You can also download the full HTML report from the app.
+
+### Check from a phone
+
+- **Same Wi-Fi:** run the command above, then on your phone open
+  `http://<your-computer-ip>:8501`. Find the IP with `ipconfig getifaddr en0`
+  (macOS) or `hostname -I` (Linux).
+- **From anywhere:** deploy free to [Streamlit Community Cloud](https://share.streamlit.io) —
+  push this repo to GitHub, create an app pointing at `app.py`, and you get a
+  public `https` URL to open or bookmark on any phone. No install needed.
+
+## Command-line usage
 
 ```bash
 # Latest 3 videos of a channel (default)
@@ -53,7 +75,7 @@ python3 yt_language_check.py @ChannelHandle --limit 5 --out report.html
 | Flag | Default | Description |
 |------|---------|-------------|
 | `channel` | *(required)* | Channel handle (`@name`), channel URL, or a single video URL |
-| `--limit` | `3` | Number of latest videos to check |
+| `--limit` | `3` | Number of latest videos to check (1–10) |
 | `--out` | `report_<channel>_<date>.html` | Output HTML report path |
 | `--lexicon` | `lexicon.json` next to the script | Path to a custom lexicon file |
 
@@ -79,7 +101,16 @@ case-insensitive and whole-word.
   "tiers": [
     { "name": "Moderate profanity", "severity": 3, "terms": ["damn", "hell", "..."] }
   ],
-  "grading": { "thresholds": { "A": 1, "B": 3, "C": 8, "D": 15 } }
+  "grading": {
+    "thresholds": { "A": 1, "B": 3, "C": 8, "D": 15 },
+    "labels": {
+      "A": "Clean — family-friendly",
+      "B": "Mild — occasional light language",
+      "C": "Moderate — some coarse language",
+      "D": "Strong — frequent coarse language",
+      "F": "Explicit — heavy or harmful language"
+    }
+  }
 }
 ```
 
@@ -94,7 +125,16 @@ case-insensitive and whole-word.
 
 **Grading:** the score is `sum(severity) / words * 1000`. Grades follow the
 `thresholds` map. Any single severity-12 hit caps the grade at **D**; three or
-more force an **F**.
+more force an **F**. Each grade carries a descriptive label (shown in the
+console and report) that you can reword via `grading.labels`:
+
+| Grade | Default description |
+|:-----:|---------------------|
+| A | Clean — family-friendly |
+| B | Mild — occasional light language |
+| C | Moderate — some coarse language |
+| D | Strong — frequent coarse language |
+| F | Explicit — heavy or harmful language |
 
 ## Notes & limitations
 

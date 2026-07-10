@@ -220,13 +220,26 @@ def grade(hits, words, lex):
 GRADE_COLORS = {"A": "#2e7d32", "B": "#7cb342", "C": "#f9a825", "D": "#ef6c00", "F": "#c62828"}
 SEV_COLORS = {1: "#f9a825", 3: "#ef6c00", 6: "#c62828", 12: "#6a1b9a"}
 
+GRADE_LABELS = {
+    "A": "Clean — family-friendly",
+    "B": "Mild — occasional light language",
+    "C": "Moderate — some coarse language",
+    "D": "Strong — frequent coarse language",
+    "F": "Explicit — heavy or harmful language",
+}
+
+def grade_label(letter, lex):
+    """Human-readable description of a letter grade (lexicon-overridable)."""
+    labels = lex.get("grading", {}).get("labels", GRADE_LABELS)
+    return labels.get(letter, GRADE_LABELS.get(letter, ""))
+
 def fmt_time(seconds):
     m, s = divmod(int(seconds), 60)
     h, m = divmod(m, 60)
     return f"{h}:{m:02d}:{s:02d}" if h else f"{m}:{s:02d}"
 
 
-def build_report(channel, videos, out_path):
+def build_report(channel, videos, out_path, lex):
     """videos: list of {id, title, grade, score, words, hits, error}"""
     all_hits = [h for v in videos for h in v.get("hits", [])]
     all_words = sum(v.get("words", 0) for v in videos)
@@ -247,11 +260,12 @@ def build_report(channel, videos, out_path):
 <b>Generated:</b> {datetime.date.today().isoformat()}</p>"""]
 
     if all_words:
-        from_hits = grade_from(all_hits, all_words, videos)
-        letter, score = from_hits
+        letter, score = grade(all_hits, all_words, lex)
         parts.append(
             f'<p><span class="badge" style="background:{GRADE_COLORS[letter]}">{letter}</span> '
-            f'&nbsp;overall — {score} weighted hits per 1,000 words, {len(all_hits)} total flags</p>')
+            f'&nbsp;<b>{html.escape(grade_label(letter, lex))}</b><br>'
+            f'<span class="muted">{score} weighted hits per 1,000 words · '
+            f'{len(all_hits)} total flags across {len(videos)} videos</span></p>')
 
     parts.append("<h2>Videos</h2><table><tr><th>Video</th><th>Grade</th><th>Flags</th><th>Words</th></tr>")
     for v in videos:
@@ -262,15 +276,21 @@ def build_report(channel, videos, out_path):
             g = v["grade"]
             parts.append(
                 f'<tr><td><a href="https://youtu.be/{v["id"]}">{html.escape(v["title"])}</a></td>'
-                f'<td><b style="color:{GRADE_COLORS[g]}">{g}</b></td>'
+                f'<td><b style="color:{GRADE_COLORS[g]}">{g}</b> '
+                f'<span class="muted">{html.escape(grade_label(g, lex))}</span></td>'
                 f'<td>{len(v["hits"])}</td><td>{v["words"]:,}</td></tr>')
     parts.append("</table>")
 
     for v in videos:
         if v.get("error") or not v.get("hits"):
             continue
-        parts.append(f'<h2>{html.escape(v["title"])}</h2>'
-                     "<table><tr><th>Time</th><th>Term</th><th>Severity</th><th>Context</th></tr>")
+        g = v["grade"]
+        parts.append(
+            f'<h2>{html.escape(v["title"])}</h2>'
+            f'<p><b style="color:{GRADE_COLORS[g]}">{g}</b> — '
+            f'{html.escape(grade_label(g, lex))} '
+            f'<span class="muted">({len(v["hits"])} flags in {v["words"]:,} words)</span></p>'
+            "<table><tr><th>Time</th><th>Term</th><th>Severity</th><th>Context</th></tr>")
         for h in sorted(v["hits"], key=lambda x: x["start"]):
             color = SEV_COLORS.get(h["severity"], "#555")
             link = f'https://youtu.be/{v["id"]}?t={int(h["start"])}'
@@ -287,19 +307,23 @@ def build_report(channel, videos, out_path):
     with open(out_path, "w", encoding="utf-8") as f:
         f.write("".join(parts))
 
-
-def grade_from(all_hits, all_words, videos):
-    lex_path = os.path.join(os.path.dirname(os.path.abspath(__file__)), "lexicon.json")
-    with open(lex_path, encoding="utf-8") as f:
-        lex = json.load(f)
-    return grade(all_hits, all_words, lex)
-
 # ---------------------------------------------------------------- main
+
+def limit_arg(value):
+    """argparse type: an integer in 1..10 (number of latest videos to check)."""
+    try:
+        n = int(value)
+    except ValueError:
+        raise argparse.ArgumentTypeError(f"'{value}' is not an integer")
+    if not 1 <= n <= 10:
+        raise argparse.ArgumentTypeError("must be between 1 and 10")
+    return n
+
 
 def main():
     ap = argparse.ArgumentParser(description="Check a YouTube channel's latest videos for coarse language.")
     ap.add_argument("channel", help="Channel handle (@name), channel URL, or a single video URL")
-    ap.add_argument("--limit", type=int, default=3, help="Number of latest videos to check (default 3)")
+    ap.add_argument("--limit", type=limit_arg, default=3, help="Number of latest videos to check (1-10, default 3)")
     ap.add_argument("--out", default=None, help="Output HTML report path")
     ap.add_argument("--lexicon", default=None, help="Path to lexicon.json")
     args = ap.parse_args()
@@ -321,11 +345,11 @@ def main():
         hits, words = analyze_snippets(snippets, lex, compiled)
         letter, score = grade(hits, words, lex)
         results.append({**v, "hits": hits, "words": words, "grade": letter, "score": score})
-        print(f"    {words:,} words, {len(hits)} flags → grade {letter}")
+        print(f"    {words:,} words, {len(hits)} flags → grade {letter} — {grade_label(letter, lex)}")
 
     safe = re.sub(r"[^\w@-]+", "_", args.channel)[:40]
     out = args.out or os.path.join(os.getcwd(), f"report_{safe}_{datetime.date.today()}.html")
-    build_report(args.channel, results, out)
+    build_report(args.channel, results, out, lex)
     print(f"\nReport saved: {out}")
 
 
