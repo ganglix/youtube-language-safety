@@ -16,7 +16,7 @@ spoken words."
 - **Editable lexicon** — `lexicon.json` holds tiered terms and severity weights; tune it without touching code.
 - **Special detectors** — catches caption bleeps (`[ __ ]`) and self-censored words (`f*ck`, `s***`).
 - **Timestamped report** — every flag links straight to that moment in the video.
-- **Weighted grading** — configurable thresholds; any severe (slur/harmful) hit caps the grade.
+- **Weighted grading, tuned for kids under 10** — words not allowed in class pull the grade down fast; any slur/harmful word fails outright. Fully configurable.
 
 ## Installation
 
@@ -102,13 +102,17 @@ case-insensitive and whole-word.
     { "name": "Moderate profanity", "severity": 3, "terms": ["damn", "hell", "..."] }
   ],
   "grading": {
-    "thresholds": { "A": 1, "B": 3, "C": 8, "D": 15 },
+    "thresholds": { "A": 0.5, "B": 1.5, "C": 4, "D": 8 },
+    "caps": [
+      { "min_severity": 12, "count": 1, "cap": "F" },
+      { "min_severity": 6, "count": 1, "cap": "D" }
+    ],
     "labels": {
-      "A": "Clean — family-friendly",
-      "B": "Mild — occasional light language",
-      "C": "Moderate — some coarse language",
-      "D": "Strong — frequent coarse language",
-      "F": "Explicit — heavy or harmful language"
+      "A": "Clean — safe for young kids",
+      "B": "Mild — a few words you'd gently correct",
+      "C": "Coarse — language not okay in class",
+      "D": "Strong — strong or repeated bad language",
+      "F": "Explicit or harmful — not for kids"
     }
   }
 }
@@ -123,18 +127,27 @@ case-insensitive and whole-word.
 | 6 | Strong profanity, sexual, or a bleeped word |
 | 12 | Slur / harmful trolling |
 
-**Grading:** the score is `sum(severity) / words * 1000`. Grades follow the
-`thresholds` map. Any single severity-12 hit caps the grade at **D**; three or
-more force an **F**. Each grade carries a descriptive label (shown in the
-console and report) that you can reword via `grading.labels`:
+**Grading** is tuned for **kids under 10** — words a teacher wouldn't allow in
+class pull the grade down quickly, and the worst language fails outright. The
+score is `sum(severity) / words * 1000`, bucketed by the `thresholds` map. On
+top of that, `caps` set a floor for words that simply aren't classroom-safe: if
+at least `count` hits reach `min_severity`, the grade can be no better than
+`cap`. With the defaults:
+
+- **any** slur / harmful word (severity 12) → **F**
+- **any** strong-profanity or bleeped word (severity 6) → no better than **D**; two → **F**
+- three or more moderate-profanity words (severity 3) → no better than **C**
+
+Each grade carries a descriptive label (shown in the console and report) that
+you can reword via `grading.labels`:
 
 | Grade | Default description |
 |:-----:|---------------------|
-| A | Clean — family-friendly |
-| B | Mild — occasional light language |
-| C | Moderate — some coarse language |
-| D | Strong — frequent coarse language |
-| F | Explicit — heavy or harmful language |
+| A | Clean — safe for young kids |
+| B | Mild — a few words you'd gently correct |
+| C | Coarse — language not okay in class |
+| D | Strong — strong or repeated bad language |
+| F | Explicit or harmful — not for kids |
 
 ## Notes & limitations
 

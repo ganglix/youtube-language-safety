@@ -168,8 +168,10 @@ if st.session_state.get("results"):
 with st.expander("How grades work"):
     lex, _ = get_lexicon()
     labels = lex.get("grading", {}).get("labels", yt.GRADE_LABELS)
-    st.markdown("**Grades** are based on weighted flags per 1,000 spoken words. "
-                "A single slur / harmful hit caps the grade at D; three or more force an F.")
+    st.markdown("**Grades** are tuned for kids under 10 — words not okay in class "
+                "pull the grade down fast. They start from weighted flags per 1,000 "
+                "spoken words, then a single slur / harmful word forces an **F** and "
+                "any strong-profanity word caps the grade at **D**.")
     st.markdown("\n".join(f"- **{g}** — {labels.get(g, '')}" for g in ["A", "B", "C", "D", "F"]))
     st.markdown("**Severity weights:** 1 mild insult · 3 moderate profanity · "
                 "6 strong profanity or bleeped word · 12 slur / harmful. "

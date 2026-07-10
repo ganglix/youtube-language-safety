@@ -52,14 +52,20 @@
     }
   },
   "grading": {
-    "_comment": "Grade from weighted hits per 1000 spoken words. Any tier-4 (severity 12) hit caps grade at D; 3+ such hits = F. 'labels' give each grade a human-readable meaning shown in the report.",
-    "thresholds": { "A": 1, "B": 3, "C": 8, "D": 15 },
+    "_comment": "Tuned for kids under 10 / classroom-appropriate. Score = weighted hits per 1000 spoken words, bucketed by 'thresholds'. 'caps' then floor the grade for words that simply aren't allowed in class: if at least 'count' hits have severity >= 'min_severity', the grade is no better than 'cap'. 'labels' give each grade a human-readable meaning shown in the report.",
+    "thresholds": { "A": 0.5, "B": 1.5, "C": 4, "D": 8 },
+    "caps": [
+      { "min_severity": 12, "count": 1, "cap": "F" },
+      { "min_severity": 6, "count": 2, "cap": "F" },
+      { "min_severity": 6, "count": 1, "cap": "D" },
+      { "min_severity": 3, "count": 3, "cap": "C" }
+    ],
     "labels": {
-      "A": "Clean — family-friendly",
-      "B": "Mild — occasional light language",
-      "C": "Moderate — some coarse language",
-      "D": "Strong — frequent coarse language",
-      "F": "Explicit — heavy or harmful language"
+      "A": "Clean — safe for young kids",
+      "B": "Mild — a few words you'd gently correct",
+      "C": "Coarse — language not okay in class",
+      "D": "Strong — strong or repeated bad language",
+      "F": "Explicit or harmful — not for kids"
     }
   }
 }

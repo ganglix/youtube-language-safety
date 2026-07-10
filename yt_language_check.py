@@ -194,11 +194,29 @@ def analyze_snippets(snippets, lex, compiled):
     return hits, words
 
 
+# Best → worst. Tuned for kids under 10: some words simply aren't classroom-safe,
+# so a "cap" makes the grade no better than a floor no matter how long the video is.
+GRADE_ORDER = ["A", "B", "C", "D", "F"]
+
+DEFAULT_THRESHOLDS = {"A": 0.5, "B": 1.5, "C": 4, "D": 8}
+DEFAULT_CAPS = [
+    {"min_severity": 12, "count": 1, "cap": "F"},  # any slur / harmful word = fail
+    {"min_severity": 6, "count": 2, "cap": "F"},   # repeated strong profanity = fail
+    {"min_severity": 6, "count": 1, "cap": "D"},   # one strong-profanity word is never OK
+    {"min_severity": 3, "count": 3, "cap": "C"},   # repeated moderate profanity
+]
+
+
+def _worse(a, b):
+    """Return the more severe of two letter grades."""
+    return a if GRADE_ORDER.index(a) >= GRADE_ORDER.index(b) else b
+
+
 def grade(hits, words, lex):
     """Return (letter, weighted_score_per_1000_words)."""
-    thresholds = lex.get("grading", {}).get("thresholds", {"A": 1, "B": 3, "C": 8, "D": 15})
+    grading = lex.get("grading", {})
+    thresholds = grading.get("thresholds", DEFAULT_THRESHOLDS)
     score = sum(h["severity"] for h in hits) / max(words, 1) * 1000
-    severe = sum(1 for h in hits if h["severity"] >= 12)
     if score < thresholds["A"]:
         letter = "A"
     elif score < thresholds["B"]:
@@ -209,10 +227,11 @@ def grade(hits, words, lex):
         letter = "D"
     else:
         letter = "F"
-    if severe >= 3:
-        letter = "F"
-    elif severe >= 1 and letter in ("A", "B", "C"):
-        letter = "D"
+    # Certain words are not allowed in class regardless of how much else is clean.
+    for cap in grading.get("caps", DEFAULT_CAPS):
+        n = sum(1 for h in hits if h["severity"] >= cap["min_severity"])
+        if n >= cap.get("count", 1):
+            letter = _worse(letter, cap["cap"])
     return letter, round(score, 2)
 
 # ---------------------------------------------------------------- report
@@ -221,11 +240,11 @@ GRADE_COLORS = {"A": "#2e7d32", "B": "#7cb342", "C": "#f9a825", "D": "#ef6c00", 
 SEV_COLORS = {1: "#f9a825", 3: "#ef6c00", 6: "#c62828", 12: "#6a1b9a"}
 
 GRADE_LABELS = {
-    "A": "Clean — family-friendly",
-    "B": "Mild — occasional light language",
-    "C": "Moderate — some coarse language",
-    "D": "Strong — frequent coarse language",
-    "F": "Explicit — heavy or harmful language",
+    "A": "Clean — safe for young kids",
+    "B": "Mild — a few words you'd gently correct",
+    "C": "Coarse — language not okay in class",
+    "D": "Strong — strong or repeated bad language",
+    "F": "Explicit or harmful — not for kids",
 }
 
 def grade_label(letter, lex):
