@@ -1,0 +1,58 @@
+{
+  "_comment": "Tiered language lexicon. Edit freely: add/remove terms, adjust severity weights. Multi-word phrases are allowed. Matching is case-insensitive, whole-word.",
+  "tiers": [
+    {
+      "name": "Mild insults & gamer trash-talk",
+      "severity": 1,
+      "terms": [
+        "crap", "crappy", "sucks", "stupid", "idiot", "idiots", "dumb",
+        "dumbest", "moron", "loser", "losers", "shut up", "screwed",
+        "jerk", "trash", "noob", "nub", "ez", "rekt",
+        "ratio", "bozo", "skill issue", "freaking", "frickin", "friggin",
+        "pathetic", "garbage"
+      ]
+    },
+    {
+      "name": "Moderate profanity",
+      "severity": 3,
+      "terms": [
+        "damn", "dammit", "goddang", "hell", "ass", "jackass", "asshole",
+        "arse", "bastard", "bitch", "bitches", "piss", "pissed", "dick",
+        "dickhead", "douche", "douchebag", "prick", "wtf", "omfg",
+        "lmfao", "screw you", "horny"
+      ]
+    },
+    {
+      "name": "Strong profanity & sexual",
+      "severity": 6,
+      "terms": [
+        "fuck", "fucking", "fucked", "fucker", "fckin", "motherfucker",
+        "shit", "shitty", "bullshit", "shite", "goddamn", "goddammit",
+        "cunt", "pussy", "cock", "whore", "slut", "tits", "porn", "pornhub"
+      ]
+    },
+    {
+      "name": "Slurs & harmful trolling",
+      "severity": 12,
+      "terms": [
+        "kys", "kill yourself", "go kill yourself", "neck yourself",
+        "go die", "retard", "retarded", "rape", "raped", "rapist",
+        "faggot", "fag", "nigger", "nigga", "pedo", "pedophile", "molest"
+      ]
+    }
+  ],
+  "special": {
+    "bleeped_caption": {
+      "severity": 6,
+      "label": "bleeped word [ __ ] in captions"
+    },
+    "censored_word": {
+      "severity": 3,
+      "label": "self-censored word (f*ck style)"
+    }
+  },
+  "grading": {
+    "_comment": "Grade from weighted hits per 1000 spoken words. Any tier-4 (severity 12) hit caps grade at D; 3+ such hits = F.",
+    "thresholds": { "A": 1, "B": 3, "C": 8, "D": 15 }
+  }
+}
